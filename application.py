@@ -11,6 +11,10 @@ CORS(application)
 load_dotenv()
 secret_key = os.getenv('authenticationKey')
 
+@application.route('/home')
+def printHomeRoute():
+    return 'Home Route'
+
 @application.route('/create_embedding', methods=['POST'])
 def create_embedding():
     headers = request.json
