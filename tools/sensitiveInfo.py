@@ -53,5 +53,3 @@ class SendSensitiveEmail(BaseTool):
             print(f"Error: {str(e)}")
         
 
-        # ("query": "user's question", "email": "") make sure it is a json object square brackets are just for the knowledge 
-    # but in original value use curly braces

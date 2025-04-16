@@ -1,9 +1,8 @@
-
+from utils.functions import response_with_sources
 from langchain.chains import RetrievalQA
 from langchain.tools import BaseTool
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-
 import os
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -21,22 +20,23 @@ llm = ChatOpenAI(
 
 class retrievalChainTool(BaseTool):
     name: str = "RetrievalChain"
-    description: str = "Use this tool when user asked something about Pakistan's History. "
+    description: str = "Use this tool when user asked something about Pakistan's History. If no relevant documents are found, don't produce final answer just trigger the web search tool. "
 
     def _run(self, query: str) -> str:
-        print('tool triggered retrieval chain')
+        print('Tool triggered retrieval chain')
 
         if not query:
             return "Error: Missing 'query' parameter"
     
-        # memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
             retriever=retriever,
+            return_source_documents = True
             # memory=memory
         )    
 
         response = qa_chain.invoke(query)
-        return response 
-       
+        final_response = response_with_sources(response)
+        print(f'final response:{final_response}')
+        return final_response

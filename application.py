@@ -1,9 +1,9 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv # Importing dotenv to get API key from .env file
 from utils.functions import generate_data_store
 from tools.agent import ask_agent
-from langchain.memory import ConversationBufferMemory
+from utils.functions import manage_history
 import os
 
 application = Flask(__name__)
@@ -11,9 +11,9 @@ CORS(application)
 load_dotenv()
 secret_key = os.getenv('authenticationKey')
 
-@application.route('/home')
+@application.route('/')
 def printHomeRoute():
-    return 'Home Route'
+    return render_template('index.html')
 
 @application.route('/create_embedding', methods=['POST'])
 def create_embedding():
@@ -22,7 +22,7 @@ def create_embedding():
     authenticationKey = headers.get('authenticationKey')
 
     if not authenticationKey:
-        return jsonify({"error": "API KEY NOT ENTERED"})
+        return jsonify({"error": "Authentication key not entered"})
 
     if not file_paths:
         return jsonify({"error": "NO file paths"})
@@ -34,27 +34,32 @@ def create_embedding():
 
 @application.route('/query', methods=['POST'])
 def query():
-    data = request.json
-    query = data.get('query')
-    history = data.get('history') or []
-    authenticationKey = data.get('authenticationKey')
+    try:
+        data = request.json
+        query = data.get('query')
+        history = data.get('history') or []
+        authenticationKey = data.get('authenticationKey')
 
-    chat_history = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
-    if not authenticationKey:
-        return jsonify({"error": "API KEY NOT ENTERED"})
+        if not authenticationKey:
+            return jsonify({"error": "Authentication key not entered"})
 
-    if (secret_key == authenticationKey):
-        for i in range(0,len(history),2):
-            user_message = history[i].get("content", "") 
-            assistant_message = history[i + 1].get("content", "") 
-            chat_history.save_context(
-                {"input" : user_message},
-                {"output":assistant_message }
-            )
-    response = ask_agent(query,chat_history)
-    return jsonify({"response": response})
+        if (secret_key != authenticationKey):
+            return jsonify({"error": "You entered wrong authentication key."})
+        
+        if (secret_key == authenticationKey):
+            chat_history = manage_history(history)
+            response = ask_agent(query,chat_history)
+            print(type(response))
+            return jsonify({"response": str(response)})
 
+
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")  # Log the error for debugging
+        return jsonify({
+        "error": "An unexpected error occurred",
+        "details": str(e)  # Only include in development environment
+        }), 500
 
  
 if __name__ == '__main__':
